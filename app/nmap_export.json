@@ -1,0 +1,11 @@
+{
+	"hosts": [
+		{
+			"ip": "172.17.0.2", 
+			"status": "up", 
+			"ports": [
+				{ "port": "502", "protocol": "tcp", "name": "modbus", "state": "open"}
+			]
+		}
+	]
+}
