@@ -13,6 +13,9 @@ logging.basicConfig()
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
+#numero di registri per tipo da stampare nel file plc_export.json
+num_registers_per_type = 5 
+
 #thread attivi
 threads = []
 
@@ -104,15 +107,18 @@ def plc_scan():
     with open('plc_export.json', 'w') as f:
         f.write('{\n\t"registers": [\n')
         #scansione discrete inputs
-        for i in range(0, 1600):
+        for i in range(0, min(num_registers_per_type, 1600)):
             try:
                 response = client.read_discrete_inputs(i, 1)
                 if response.isError():
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ExceptionResponse):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ModbusException):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 else:
                     plc_address = "%IX" + str(i//8) + "." + str(i%8)
                     f.write("\t\t{ ")
@@ -124,17 +130,23 @@ def plc_scan():
                     f.write("}, \n")
                     t.add_row(["discrete input", i, plc_address, "1 bit", response.bits[0]])
             except ExceptionResponse:
-                pass
+                print("An error occured, returning to main menu")
+                return
+        #riga vuota tra registri di tipo diverso
+        f.write("\n")
         #scansione registri di input
-        for i in range(0, 1024):
+        for i in range(0, min(num_registers_per_type, 1024)):
             try:
                 response = client.read_input_registers(i, 1)
                 if response.isError():
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ExceptionResponse):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ModbusException):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 else:
                     plc_address = "%IW" + str(i)
                     f.write("\t\t{ ")
@@ -146,22 +158,25 @@ def plc_scan():
                     f.write("}, \n")
                     t.add_row(["input register", i, plc_address, "16 bit", response.registers[0]])
             except ExceptionResponse:
-                pass
-        #scansione registri di holding da 16 bit
-        for i in range(0, 2048):
+                print("An error occured, returning to main menu")
+                return
+        #riga vuota tra registri di tipo diverso
+        f.write("\n")
+        #scansione registri di holding da 16 bit fino a 1023 (analog outputs)
+        for i in range(0, min(num_registers_per_type, 1024)):
             try:
                 response = client.read_holding_registers(i, 1)
                 if response.isError():
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ExceptionResponse):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ModbusException):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 else:
-                    if i < 1024:
-                        plc_address = "%QW" + str(i)
-                    else:
-                        plc_address = "%MW" + str(i-1024)
+                    plc_address = "%QW" + str(i)
                     f.write("\t\t{ ")
                     f.write('"type": "holding register", ')
                     f.write('"modbus_address": "' + str(i) + '", ')
@@ -171,17 +186,51 @@ def plc_scan():
                     f.write("}, \n")
                     t.add_row(["holding register", i, plc_address, "16 bit", response.registers[0]])
             except ExceptionResponse:
-                pass
-        #scansione registri di holding da 32 bit
-        for i in range(2048, 4096, 2):
+                print("An error occured, returning to main menu")
+                return
+        #riga vuota tra registri di tipo diverso
+        f.write("\n")
+        #scansione registri di holding da 16 bit da 1024 a 2047 (memory)
+        for i in range(1024, min(1024 + num_registers_per_type, 2048)):
             try:
                 response = client.read_holding_registers(i, 1)
                 if response.isError():
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ExceptionResponse):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ModbusException):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
+                else:
+                    plc_address = "%MW" + str(i-1024)
+                    f.write("\t\t{ ")
+                    f.write('"type": "holding register", ')
+                    f.write('"modbus_address": "' + str(i) + '", ')
+                    f.write('"plc_address": "' + plc_address + '", ')
+                    f.write('"data_size": "16 bit", ')
+                    f.write('"value": "' + str(response.registers[0]) + '"')
+                    f.write("}, \n")
+                    t.add_row(["holding register", i, plc_address, "16 bit", response.registers[0]])
+            except ExceptionResponse:
+                print("An error occured, returning to main menu")
+                return
+        #riga vuota tra registri di tipo diverso
+        f.write("\n")
+        #scansione registri di holding da 32 bit
+        for i in range(2048, min(2048 + (num_registers_per_type*2), 4096), 2):
+            try:
+                response = client.read_holding_registers(i, 1)
+                if response.isError():
+                    print("An error occured, returning to main menu")
+                    return
+                elif isinstance(response, ExceptionResponse):
+                    print("An error occured, returning to main menu")
+                    return
+                elif isinstance(response, ModbusException):
+                    print("An error occured, returning to main menu")
+                    return
                 else:
                     plc_address = "%MD" + str((i-2048)//2)
                     f.write("\t\t{ ")
@@ -193,17 +242,23 @@ def plc_scan():
                     f.write("}, \n")
                     t.add_row(["holding register", i, plc_address, "32 bit", response.registers[0]])
             except ExceptionResponse:
-                pass
+                print("An error occured, returning to main menu")
+                return
+        #riga vuota tra registri di tipo diverso
+        f.write("\n")
         #scansione registri di holding da 64 bit
-        for i in range(4096, 8192, 4):
+        for i in range(4096, min(4096 + (num_registers_per_type * 4), 8192), 4):
             try:
                 response = client.read_holding_registers(i, 1)
                 if response.isError():
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ExceptionResponse):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ModbusException):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 else:
                     plc_address = "%ML" + str((i-4096)//4)
                     f.write("\t\t{ ")
@@ -215,17 +270,23 @@ def plc_scan():
                     f.write("}, \n")
                     t.add_row(["holding register", i, plc_address, "64 bit", response.registers[0]])
             except ExceptionResponse:
-                pass
+                print("An error occured, returning to main menu")
+                return
+        #riga vuota tra registri di tipo diverso
+        f.write("\n")
         #scansione coils
-        for i in range(0, 1600):
+        for i in range(0, min(num_registers_per_type, 1600)):
             try:
                 response = client.read_coils(i, 1)
                 if response.isError():
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ExceptionResponse):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 elif isinstance(response, ModbusException):
-                    continue
+                    print("An error occured, returning to main menu")
+                    return
                 else:
                     plc_address = "%QX" + str(i//8) + "." + str(i%8)
                     f.write("\t\t{ ")
@@ -237,7 +298,8 @@ def plc_scan():
                     f.write("}, \n")
                     t.add_row(["coil", i, plc_address, "1 bit", response.bits[0]])
             except ExceptionResponse:
-                pass
+                print("An error occured, returning to main menu")
+                return
         #elimina l'ultima virgola
         f.seek(f.tell() - 3)
         f.write("\n\t]\n}")
