@@ -721,7 +721,7 @@ def manage_threads():
     while not valid:
         try:
             choice = int(input("\nInserisci il numero del thread da fermare (0 per tornare al menu): "))
-            if choice in range(len(threads)+1):
+            if choice in range(1, len(threads)+1):
                 valid = True
             elif choice == 0:
                 return
@@ -760,7 +760,12 @@ if __name__ == "__main__":
                 print("\nGestione degli attacchi DOS")
                 manage_threads()
             elif choice == 7:
+                #chiude tutte le thread
+                for thread in threads:
+                    thread[1].do_run = False
+                    thread[1].join
                 print("\nEsci")
+                
             else:
                 print("Scelta non valida")
         except ValueError:
